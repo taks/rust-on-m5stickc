@@ -2,7 +2,7 @@
 #![no_main]
 
 pub mod m5stickc;
-
+use embedded_hal::delay::blocking::DelayUs;
 use log::*;
 
 #[no_mangle]
@@ -14,10 +14,33 @@ fn main() {
   // Bind the log crate to the ESP Logging facilities
   esp_idf_svc::log::EspLogger::initialize_default();
 
-  let result = m5stickc::axp192::begin(m5stickc::axp192::BeginConf::default());
-  if result.is_err() {
-    error!("axp192: Initialization failure");
-  }
+  // WDT OFF
+  unsafe {
+    esp_idf_sys::esp_task_wdt_delete(esp_idf_sys::xTaskGetIdleTaskHandleForCPU(
+      esp_idf_hal::cpu::core() as u32,
+    ))
+  };
 
-  info!("Hello, world!");
+  let mut delay = esp_idf_hal::delay::Ets {};
+  let mut m5 = m5stickc::M5::new().unwrap();
+
+  loop {
+    info!(
+      "AXP Temp: {:.1}C",
+      m5.axp.get_temp_in_axp192().unwrap_or(f32::NAN)
+    );
+    info!(
+      "[Bat] V: {:.3}v  I: {:.3}ma",
+      m5.axp.get_bat_voltage().unwrap_or(f32::NAN),
+      m5.axp.get_bat_current().unwrap_or(f32::NAN)
+    );
+
+    info!(
+      "[USB]  V: {:.3}v  I: {:.3}ma",
+      m5.axp.get_vbus_voltage().unwrap_or(f32::NAN),
+      m5.axp.get_vbus_current().unwrap_or(f32::NAN)
+    );
+
+    delay.delay_ms(5000_u32).unwrap();
+  }
 }

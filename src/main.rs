@@ -1,7 +1,10 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 pub mod m5stickc;
+
 use embedded_hal::delay::blocking::DelayUs;
 use log::*;
 
@@ -23,24 +26,22 @@ fn main() {
 
   let mut delay = esp_idf_hal::delay::Ets {};
   let mut m5 = m5stickc::M5::new().unwrap();
+  m5.mpu6886.init().unwrap();
 
   loop {
-    info!(
-      "AXP Temp: {:.1}C",
-      m5.axp.get_temp_in_axp192().unwrap_or(f32::NAN)
-    );
-    info!(
-      "[Bat] V: {:.3}v  I: {:.3}ma",
-      m5.axp.get_bat_voltage().unwrap_or(f32::NAN),
-      m5.axp.get_bat_current().unwrap_or(f32::NAN)
-    );
+    m5.update();
+    let gyro_result = m5.mpu6886.get_gyro_data();
+    let accel_result = m5.mpu6886.get_accel_data();
 
-    info!(
-      "[USB]  V: {:.3}v  I: {:.3}ma",
-      m5.axp.get_vbus_voltage().unwrap_or(f32::NAN),
-      m5.axp.get_vbus_current().unwrap_or(f32::NAN)
-    );
+    if gyro_result.is_ok() && accel_result.is_ok() {
+      let (gyro_x, gyro_y, gyro_z) = gyro_result.unwrap();
+      let (acc_x, acc_y, acc_z) = accel_result.unwrap();
+      info!(
+        "{:.2}, {:.2}, {:.2}, {:.2}, {:.2}, {:.2}",
+        gyro_x, gyro_y, gyro_z, acc_x * 1000.0, acc_y * 1000.0, acc_z * 1000.0
+      );
+    }
 
-    delay.delay_ms(5000_u32).unwrap();
+    delay.delay_ms(50_u32).unwrap();
   }
 }

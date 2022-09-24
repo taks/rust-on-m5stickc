@@ -1,10 +1,8 @@
 use alloc::sync::Arc;
 
 use embedded_hal::delay::blocking::DelayUs;
-use embedded_hal::i2c::blocking::I2c;
 
-use esp_idf_hal::gpio::*;
-use esp_idf_hal::i2c;
+use esp_idf_hal::i2c::I2cError;
 use esp_idf_hal::mutex::Mutex;
 
 const MPU6886_ADDRESS: u8 = 0x68;
@@ -38,14 +36,18 @@ pub enum Gscale {
   Gfs2000dps = 3,
 }
 
-pub struct MPU6886 {
-  wire: Arc<Mutex<i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>>>,
+pub struct MPU6886<I2C> {
+  wire: Arc<Mutex<I2C>>,
   g_res: f32,
   a_res: f32,
 }
 
-impl MPU6886 {
-  pub fn new(wire: Arc<Mutex<i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>>>) -> Self {
+impl<I2C> MPU6886<I2C>
+where
+  I2C: embedded_hal::i2c::blocking::I2c,
+  I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
+{
+  pub fn new(wire: Arc<Mutex<I2C>>) -> Self {
     return Self {
       wire: wire,
       g_res: 0.0,
@@ -160,7 +162,11 @@ impl MPU6886 {
     let gy = (((buf[2] as u16) << 8) | (buf[3] as u16)) as i16;
     let gz = (((buf[4] as u16) << 8) | (buf[5] as u16)) as i16;
 
-    return Ok(((gx as f32) * self.g_res, (gy as f32) * self.g_res, (gz as f32) * self.g_res));
+    return Ok((
+      (gx as f32) * self.g_res,
+      (gy as f32) * self.g_res,
+      (gz as f32) * self.g_res,
+    ));
   }
 
   pub fn get_accel_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
@@ -173,7 +179,10 @@ impl MPU6886 {
     let gy = (((buf[2] as u16) << 8) | (buf[3] as u16)) as i16;
     let gz = (((buf[4] as u16) << 8) | (buf[5] as u16)) as i16;
 
-    return Ok(((gx as f32) * self.a_res, (gy as f32) * self.a_res, (gz as f32) * self.a_res));
-  }  
-
+    return Ok((
+      (gx as f32) * self.a_res,
+      (gy as f32) * self.a_res,
+      (gz as f32) * self.a_res,
+    ));
+  }
 }

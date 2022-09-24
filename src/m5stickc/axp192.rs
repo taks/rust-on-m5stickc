@@ -1,9 +1,6 @@
 use alloc::sync::Arc;
 
-use embedded_hal::i2c::blocking::I2c;
-
-use esp_idf_hal::gpio::*;
-use esp_idf_hal::i2c;
+use esp_idf_hal::i2c::I2cError;
 use esp_idf_hal::mutex::Mutex;
 
 use super::misc::map;
@@ -32,13 +29,17 @@ impl Default for BeginConf {
   }
 }
 
-pub struct Axp192 {
-  wire: Arc<Mutex<i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>>>,
+pub struct Axp192<I2C> {
+  wire: Arc<Mutex<I2C>>,
 }
 
-impl Axp192 {
+impl<I2C> Axp192<I2C>
+where
+  I2C: embedded_hal::i2c::blocking::I2c,
+  I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
+{
   pub fn new(
-    wire: Arc<Mutex<i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>>>,
+    wire: Arc<Mutex<I2C>>,
     x: BeginConf,
   ) -> anyhow::Result<Self, esp_idf_hal::i2c::I2cError> {
     let mut ret = Self { wire: wire };
@@ -91,9 +92,7 @@ impl Axp192 {
     ret.write(&[0x39, 0xfc])?;
 
     // Enable RTC BAT charge
-    ret.write(
-      &[0x35, 0xa2 & (if x.disable_rtc { 0x7F } else { 0xFF })],
-    )?;
+    ret.write(&[0x35, 0xa2 & (if x.disable_rtc { 0x7F } else { 0xFF })])?;
 
     // Enable bat detection
     ret.write(&[0x32, 0x46])?;
@@ -124,7 +123,7 @@ impl Axp192 {
     let data = self.read1byte(0x31)?;
     self.write(&[0x31, data | (1 << 3)])?; // Turn on short press to wake up
     let data = self.read1byte(0x90)?;
-    self.write(&[0x90 , data | 0x07])?; // GPIO0 floating
+    self.write(&[0x90, data | 0x07])?; // GPIO0 floating
     self.write(&[0x82, 0x00])?; // Disable ADCs
     let data = self.read1byte(0x12)?;
     self.write(&[0x12, data & 0xA1])?; // Disable all outputs but DCDC1
@@ -152,7 +151,7 @@ impl Axp192 {
 
   pub fn get_vbus_current(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 0.375;
-    let data = self.read12bit( 0x5C )? as f32;
+    let data = self.read12bit(0x5C)? as f32;
     return Ok(data * ADCLSB);
   }
 

@@ -12,11 +12,13 @@ use esp_idf_hal::prelude::*;
 
 use esp_idf_hal::prelude::Peripherals;
 
+type Wire1 = i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>;
+
 pub struct M5 {
-  pub axp: axp192::Axp192,
+  pub axp: axp192::Axp192<Wire1>,
   pub btn_a: button::Button<Gpio37<Input>>,
   pub btn_b: button::Button<Gpio39<Input>>,
-  pub mpu6886: mpu6886::MPU6886,
+  pub mpu6886: mpu6886::MPU6886<Wire1>,
 }
 
 impl M5 {

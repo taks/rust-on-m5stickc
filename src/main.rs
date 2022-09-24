@@ -26,22 +26,12 @@ fn main() {
 
   let mut delay = esp_idf_hal::delay::Ets {};
   let mut m5 = m5stickc::M5::new().unwrap();
+  m5.lcd.print("LINE1\nLINE2\n").unwrap();
+  m5.lcd.print("LINE3\nLINE4\n").unwrap();
   m5.mpu6886.init().unwrap();
 
   loop {
     m5.update();
-    let gyro_result = m5.mpu6886.get_gyro_data();
-    let accel_result = m5.mpu6886.get_accel_data();
-
-    if gyro_result.is_ok() && accel_result.is_ok() {
-      let (gyro_x, gyro_y, gyro_z) = gyro_result.unwrap();
-      let (acc_x, acc_y, acc_z) = accel_result.unwrap();
-      info!(
-        "{:.2}, {:.2}, {:.2}, {:.2}, {:.2}, {:.2}",
-        gyro_x, gyro_y, gyro_z, acc_x * 1000.0, acc_y * 1000.0, acc_z * 1000.0
-      );
-    }
-
     delay.delay_ms(50_u32).unwrap();
   }
 }

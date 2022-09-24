@@ -23,6 +23,8 @@ esp-idf-svc = { version = "0.42", default-features = false, features = ["alloc"]
 esp-idf-hal = { version = "0.38.1", default-features = false }
 embedded-svc = { version = "0.22.1", default-features = false }
 embedded-hal = { version = "1.0.0-alpha.8", default-features = false }
+st7735-lcd = { version = "0.8.1" }
+embedded-graphics = { version = "0.7.1" }
 
 [build-dependencies]
 embuild = "0.29"

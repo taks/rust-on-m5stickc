@@ -154,7 +154,7 @@ where
 
   pub fn get_gyro_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
     let mut wire = self.wire.lock();
-    let mut buf = [0x00u8, 0x00u8, 0x00u8, 0x00u8, 0x00u8, 0x00u8];
+    let mut buf = [0x00u8; 6];
 
     wire.write_read(MPU6886_ADDRESS, &[MPU6886_GYRO_XOUT_H], &mut buf)?;
 
@@ -171,7 +171,7 @@ where
 
   pub fn get_accel_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
     let mut wire = self.wire.lock();
-    let mut buf = [0x00u8, 0x00u8, 0x00u8, 0x00u8, 0x00u8, 0x00u8];
+    let mut buf = [0x00u8; 6];
 
     wire.write_read(MPU6886_ADDRESS, &[MPU6886_ACCEL_XOUT_H], &mut buf)?;
 

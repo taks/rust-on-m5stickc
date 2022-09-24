@@ -2,6 +2,7 @@ pub mod axp192;
 pub mod button;
 pub mod misc;
 pub mod mpu6886;
+pub mod display;
 
 use alloc::sync::Arc;
 
@@ -9,20 +10,24 @@ use esp_idf_hal::gpio::*;
 use esp_idf_hal::i2c;
 use esp_idf_hal::mutex::Mutex;
 use esp_idf_hal::prelude::*;
+use esp_idf_hal::spi;
 
 use esp_idf_hal::prelude::Peripherals;
 
 type Wire1 = i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>;
+
+use anyhow::Result;
 
 pub struct M5 {
   pub axp: axp192::Axp192<Wire1>,
   pub btn_a: button::Button<Gpio37<Input>>,
   pub btn_b: button::Button<Gpio39<Input>>,
   pub mpu6886: mpu6886::MPU6886<Wire1>,
+  pub lcd: display::Display,
 }
 
 impl M5 {
-  pub fn new() -> anyhow::Result<Self, esp_idf_hal::i2c::I2cError> {
+  pub fn new() -> Result<Self, esp_idf_hal::i2c::I2cError> {
     let peripherals = Peripherals::take().unwrap();
 
     let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
@@ -45,11 +50,32 @@ impl M5 {
 
     let mpu6886 = mpu6886::MPU6886::new(wire1);
 
+    let spi = peripherals.spi3;
+    let tft_mosi = peripherals.pins.gpio15;
+    // let tft_miso = peripherals.pins.gpio14; // TODO: unused?
+    let tft_sclk = peripherals.pins.gpio13;
+    let tft_dc = peripherals.pins.gpio23.into_output().unwrap();
+    let tft_cs = peripherals.pins.gpio5;
+    let tft_rst = peripherals.pins.gpio18.into_output().unwrap();
+    let config = spi::config::Config::default().baudrate(27.MHz().into());
+    let spi = spi::Master::<spi::SPI3, _, _, Gpio14<Unknown>, _>::new(
+      spi,
+      spi::Pins {
+        sclk: tft_sclk,
+        sdo: tft_mosi,
+        sdi: None,
+        cs: Some(tft_cs),
+      },
+      config,
+    )?;
+    let display = display::Display::new(spi, tft_dc, tft_rst).unwrap();
+
     return Ok(M5 {
       axp,
       btn_a,
       btn_b,
       mpu6886,
+      lcd: display,
     });
   }
 

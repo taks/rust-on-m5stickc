@@ -106,8 +106,9 @@ where
 
   pub fn screen_breath(&mut self, brightness: i16) -> Result<(), esp_idf_hal::i2c::I2cError> {
     if brightness > 100 || brightness < 0 {
-      // TODO: return error
-      return Ok(());
+      return Err(esp_idf_hal::i2c::I2cError::other(
+        esp_idf_sys::EspError::from(-1).unwrap(),
+      ));
     }
     let vol = map(brightness.into(), 0, 100, 2500, 3200);
     let vol = if vol < 1800 { 0 } else { (vol - 1800) / 100 };
@@ -177,14 +178,14 @@ where
 
   fn read12bit(&mut self, addr: u8) -> anyhow::Result<u16, esp_idf_hal::i2c::I2cError> {
     let mut wire = self.wire.lock();
-    let mut buf = [0x00u8, 0x00u8];
+    let mut buf = [0x00u8; 2];
     wire.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
     return Ok(((buf[0] as u16) << 4) + (buf[1] as u16));
   }
 
   fn read13bit(&mut self, addr: u8) -> anyhow::Result<u16, esp_idf_hal::i2c::I2cError> {
     let mut wire = self.wire.lock();
-    let mut buf = [0x00u8, 0x00u8];
+    let mut buf = [0x00u8; 2];
     wire.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
     return Ok(((buf[0] as u16) << 5) + (buf[1] as u16));
   }

@@ -3,6 +3,7 @@ pub mod button;
 pub mod misc;
 pub mod mpu6886;
 pub mod display;
+pub mod display_buffer;
 
 use alloc::sync::Arc;
 
@@ -15,6 +16,13 @@ use esp_idf_hal::spi;
 use esp_idf_hal::prelude::Peripherals;
 
 type Wire1 = i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>;
+type Spi3Master = esp_idf_hal::spi::Master<
+  esp_idf_hal::spi::SPI3,
+  Gpio13<Unknown>,
+  Gpio15<Unknown>,
+  Gpio14<Unknown>,
+  Gpio5<Unknown>,
+>;
 
 use anyhow::Result;
 
@@ -23,7 +31,7 @@ pub struct M5 {
   pub btn_a: button::Button<Gpio37<Input>>,
   pub btn_b: button::Button<Gpio39<Input>>,
   pub mpu6886: mpu6886::MPU6886<Wire1>,
-  pub lcd: display::Display,
+  pub lcd: display::Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>,
 }
 
 impl M5 {

@@ -58,57 +58,59 @@ where
   pub fn init(&mut self) -> Result<(), esp_idf_hal::i2c::I2cError> {
     let mut delay = esp_idf_hal::delay::Ets {};
 
-    {
-      let mut buf = [0x00u8];
-      let mut wire = self.wire.lock();
-      wire.write_read(MPU6886_ADDRESS, &[MPU6886_WHOAMI], &mut buf)?;
-      if buf[0] != 0x19 {
-        return Err(esp_idf_hal::i2c::I2cError::other(
-          esp_idf_sys::EspError::from(-1).unwrap(),
-        ));
-      }
-      delay.delay_ms(1).unwrap();
+    let mut buf = [0x00u8];
+    let mut wire = self.wire.lock();
+    wire.write_read(MPU6886_ADDRESS, &[MPU6886_WHOAMI], &mut buf)?;
 
-      wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x00])?;
-      delay.delay_ms(10).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 7])?;
-      delay.delay_ms(10).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 0])?;
-      delay.delay_ms(10).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, 0x10])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, 0x18])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_CONFIG, 0x01])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_SMPLRT_DIV, 0x05])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x00])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG2, 0x00])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_USER_CTRL, 0x00])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_FIFO_EN, 0x00])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_INT_PIN_CFG, 0x22])?;
-      delay.delay_ms(1).unwrap();
-
-      wire.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x01])?;
-
-      delay.delay_ms(100).unwrap();
+    if buf[0] != 0x19 {
+      return Err(esp_idf_hal::i2c::I2cError::other(
+        esp_idf_sys::EspError::from(-1).unwrap(),
+      ));
     }
+    
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x00])?;
+    delay.delay_ms(10).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 7])?;
+    delay.delay_ms(10).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 0])?;
+    delay.delay_ms(10).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, 0x10])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, 0x18])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_CONFIG, 0x01])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_SMPLRT_DIV, 0x05])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x00])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG2, 0x00])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_USER_CTRL, 0x00])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_FIFO_EN, 0x00])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_INT_PIN_CFG, 0x22])?;
+    delay.delay_ms(1).unwrap();
+
+    wire.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x01])?;
+
+    delay.delay_ms(100).unwrap();
+
+    drop(wire);
 
     self.set_gyro_fsr(Gscale::Gfs2000dps)?;
     self.set_accel_fsr(Ascale::Afs8g)?;

@@ -29,7 +29,7 @@ fn main() {
   unsafe {
     esp_idf_sys::esp_task_wdt_delete(esp_idf_sys::xTaskGetIdleTaskHandleForCPU(
       esp_idf_hal::cpu::core() as u32,
-    ))
+    ));
   };
 
   let mut delay = esp_idf_hal::delay::Ets {};

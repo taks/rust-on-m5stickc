@@ -1,7 +1,5 @@
-use alloc::sync::Arc;
 
 use esp_idf_hal::i2c::I2cError;
-use esp_idf_hal::mutex::Mutex;
 
 use super::misc::map;
 
@@ -30,7 +28,7 @@ impl Default for BeginConf {
 }
 
 pub struct Axp192<I2C> {
-  wire: Arc<Mutex<I2C>>,
+  i2c: I2C,
 }
 
 impl<I2C> Axp192<I2C>
@@ -39,10 +37,10 @@ where
   I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
 {
   pub fn new(
-    wire: Arc<Mutex<I2C>>,
+    i2c: I2C,
     x: BeginConf,
   ) -> anyhow::Result<Self, esp_idf_hal::i2c::I2cError> {
-    let mut ret = Self { wire: wire };
+    let mut ret = Self { i2c };
 
     // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
     ret.write(&[0x28, 0xcc])?;
@@ -164,29 +162,25 @@ where
   }
 
   fn write(&mut self, bytes: &[u8]) -> anyhow::Result<(), esp_idf_hal::i2c::I2cError> {
-    let mut wire = self.wire.lock();
-    wire.write(AXP192_ADDRESS, bytes)?;
+    self.i2c.write(AXP192_ADDRESS, bytes)?;
     return Ok(());
   }
 
   fn read1byte(&mut self, addr: u8) -> anyhow::Result<u8, esp_idf_hal::i2c::I2cError> {
-    let mut wire = self.wire.lock();
     let mut buf = [0x00u8];
-    wire.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
+    self.i2c.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
     return Ok(buf[0]);
   }
 
   fn read12bit(&mut self, addr: u8) -> anyhow::Result<u16, esp_idf_hal::i2c::I2cError> {
-    let mut wire = self.wire.lock();
     let mut buf = [0x00u8; 2];
-    wire.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
+    self.i2c.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
     return Ok(((buf[0] as u16) << 4) + (buf[1] as u16));
   }
 
   fn read13bit(&mut self, addr: u8) -> anyhow::Result<u16, esp_idf_hal::i2c::I2cError> {
-    let mut wire = self.wire.lock();
     let mut buf = [0x00u8; 2];
-    wire.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
+    self.i2c.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
     return Ok(((buf[0] as u16) << 5) + (buf[1] as u16));
   }
 }

@@ -1,9 +1,7 @@
-use alloc::sync::Arc;
 
 use embedded_hal::delay::blocking::DelayUs;
 
 use esp_idf_hal::i2c::I2cError;
-use esp_idf_hal::mutex::Mutex;
 
 const MPU6886_ADDRESS: u8 = 0x68;
 const MPU6886_WHOAMI: u8 = 0x75;
@@ -37,7 +35,7 @@ pub enum Gscale {
 }
 
 pub struct MPU6886<I2C> {
-  wire: Arc<Mutex<I2C>>,
+  i2c: I2C,
   g_res: f32,
   a_res: f32,
 }
@@ -47,9 +45,9 @@ where
   I2C: embedded_hal::i2c::blocking::I2c,
   I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
 {
-  pub fn new(wire: Arc<Mutex<I2C>>) -> Self {
+  pub fn new(i2c: I2C) -> Self {
     return Self {
-      wire: wire,
+      i2c,
       g_res: 0.0,
       a_res: 0.0,
     };
@@ -59,8 +57,7 @@ where
     let mut delay = esp_idf_hal::delay::Ets {};
 
     let mut buf = [0x00u8];
-    let mut wire = self.wire.lock();
-    wire.write_read(MPU6886_ADDRESS, &[MPU6886_WHOAMI], &mut buf)?;
+    self.i2c.write_read(MPU6886_ADDRESS, &[MPU6886_WHOAMI], &mut buf)?;
 
     if buf[0] != 0x19 {
       return Err(esp_idf_hal::i2c::I2cError::other(
@@ -70,47 +67,45 @@ where
     
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x00])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x00])?;
     delay.delay_ms(10).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 7])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 7])?;
     delay.delay_ms(10).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 0])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 0])?;
     delay.delay_ms(10).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, 0x10])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, 0x10])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, 0x18])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, 0x18])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_CONFIG, 0x01])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_CONFIG, 0x01])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_SMPLRT_DIV, 0x05])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_SMPLRT_DIV, 0x05])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x00])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x00])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG2, 0x00])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG2, 0x00])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_USER_CTRL, 0x00])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_USER_CTRL, 0x00])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_FIFO_EN, 0x00])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_FIFO_EN, 0x00])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_INT_PIN_CFG, 0x22])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_INT_PIN_CFG, 0x22])?;
     delay.delay_ms(1).unwrap();
 
-    wire.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x01])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x01])?;
 
     delay.delay_ms(100).unwrap();
-
-    drop(wire);
 
     self.set_gyro_fsr(Gscale::Gfs2000dps)?;
     self.set_accel_fsr(Ascale::Afs8g)?;
@@ -120,10 +115,9 @@ where
 
   pub fn set_gyro_fsr(&mut self, scale: Gscale) -> Result<(), esp_idf_hal::i2c::I2cError> {
     let mut delay = esp_idf_hal::delay::Ets {};
-    let mut wire = self.wire.lock();
 
     let regdata = (scale as u8) << 3;
-    wire.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, regdata])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, regdata])?;
     delay.delay_ms(10).unwrap();
 
     self.g_res = match scale {
@@ -138,10 +132,9 @@ where
 
   pub fn set_accel_fsr(&mut self, scale: Ascale) -> Result<(), esp_idf_hal::i2c::I2cError> {
     let mut delay = esp_idf_hal::delay::Ets {};
-    let mut wire = self.wire.lock();
 
     let regdata = (scale as u8) << 3;
-    wire.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, regdata])?;
+    self.i2c.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, regdata])?;
     delay.delay_ms(10).unwrap();
 
     self.a_res = match scale {
@@ -155,10 +148,9 @@ where
   }
 
   pub fn get_gyro_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
-    let mut wire = self.wire.lock();
     let mut buf = [0x00u8; 6];
 
-    wire.write_read(MPU6886_ADDRESS, &[MPU6886_GYRO_XOUT_H], &mut buf)?;
+    self.i2c.write_read(MPU6886_ADDRESS, &[MPU6886_GYRO_XOUT_H], &mut buf)?;
 
     let gx = (((buf[0] as u16) << 8) | (buf[1] as u16)) as i16;
     let gy = (((buf[2] as u16) << 8) | (buf[3] as u16)) as i16;
@@ -172,10 +164,9 @@ where
   }
 
   pub fn get_accel_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
-    let mut wire = self.wire.lock();
     let mut buf = [0x00u8; 6];
 
-    wire.write_read(MPU6886_ADDRESS, &[MPU6886_ACCEL_XOUT_H], &mut buf)?;
+    self.i2c.write_read(MPU6886_ADDRESS, &[MPU6886_ACCEL_XOUT_H], &mut buf)?;
 
     let gx = (((buf[0] as u16) << 8) | (buf[1] as u16)) as i16;
     let gy = (((buf[2] as u16) << 8) | (buf[3] as u16)) as i16;

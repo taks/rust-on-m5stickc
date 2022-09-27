@@ -1,8 +1,4 @@
 use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::prelude::*;
-
-use embedded_graphics::primitives::Rectangle;
-use st7735_lcd::Orientation;
 
 use anyhow::Result;
 
@@ -31,15 +27,13 @@ where
     let tft_height = (TFT_HEIGHT + TFT_Y_OFFSET) as u32;
 
     let mut display =
-      st7735_lcd::ST7735::new(spi, tft_dc, tft_rst, true, false, tft_width, tft_height);
+      st7735_lcd::ST7735::new(spi, tft_dc, tft_rst, true, true, tft_width, tft_height);
     let mut delay = esp_idf_hal::delay::Ets {};
     display.init(&mut delay)?;
     display.set_offset(TFT_X_OFFSET as u16, TFT_Y_OFFSET as u16);
-    display.set_orientation(&Orientation::Landscape)?;
+    display.set_orientation(&st7735_lcd::Orientation::Landscape)?;
 
-    return Ok(Display {
-      deriver: display,
-    });
+    return Ok(Display { deriver: display });
   }
 
   pub fn width(&mut self) -> usize {
@@ -50,14 +44,14 @@ where
     TFT_HEIGHT as usize
   }
 
-  pub fn clear(&mut self) -> Result<(), ()> {
-    self.deriver.clear(Rgb565::WHITE)
-  }
+  pub fn draw(
+    &mut self,
+    display_buffer: &mut super::display_buffer::DisplayBuffer<Rgb565>,
+  ) -> Result<(), ()> {
+    let ex = (self.width() - 1) as u16;
+    let ey = (self.height() - 1) as u16;
+    let data = display_buffer.as_bytes();
 
-  pub fn draw(&mut self, display_buffer: &super::display_buffer::DisplayBuffer<Rgb565>) -> Result<(), ()> {
-    let area = Rectangle::new(Point::new(0, 0), Size::new(self.width() as u32, self.height() as u32));
-    let iter = display_buffer.buffer.iter().map(|e| *e);
-
-    self.deriver.fill_contiguous(&area, iter)
+    self.deriver.set_pixels_slice(0, 0, ex, ey, data)
   }
 }

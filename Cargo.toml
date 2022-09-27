@@ -24,7 +24,7 @@ esp-idf-hal = { version = "0.38.1", default-features = false }
 embedded-svc = { version = "0.22.1", default-features = false }
 embedded-hal = { version = "1.0.0-alpha.8", default-features = false }
 embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.7", features = ["unproven"] }
-st7735-lcd = { version = "0.8.1" }
+st7735-lcd = { git = "https://github.com/taks/st7735-lcd-rs.git", rev = "fbe6560efcf13bb26db05cca98027f18018d1346" }
 embedded-graphics = { version = "0.7.1" }
 
 [build-dependencies]

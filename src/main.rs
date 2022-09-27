@@ -37,8 +37,8 @@ fn main() {
   m5.mpu6886.init().unwrap();
 
   let mut canvas = display_buffer::DisplayBuffer::new(
-    Rgb565::WHITE,
     Rgb565::BLACK,
+    Rgb565::WHITE,
     m5.lcd.width(),
     m5.lcd.height(),
   );
@@ -67,7 +67,7 @@ fn main() {
       write!(canvas, "Sensor read error").unwrap();
     }
 
-    m5.lcd.draw(&canvas).unwrap();
+    m5.lcd.draw(&mut canvas).unwrap();
     delay.delay_ms(100).unwrap();
   }
 }

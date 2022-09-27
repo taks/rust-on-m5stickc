@@ -61,6 +61,10 @@ impl<C: PixelColor> DisplayBuffer<C> {
   pub fn clear_default(&mut self) {
     self.buffer.fill(self.background_color);
   }
+
+  pub fn as_bytes(&mut self) -> &[u8] {
+    super::misc::as_bytes::<C>(&*self.buffer)
+  }
 }
 
 impl<C: PixelColor> OriginDimensions for DisplayBuffer<C> {

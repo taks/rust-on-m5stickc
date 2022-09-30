@@ -1,17 +1,32 @@
 #![no_std]
-
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
 
 pub mod axp192;
 pub mod button;
-pub mod display;
+
+#[cfg(feature = "m5stickc_plus")]
+pub mod display_st7789;
+#[cfg(not(feature = "m5stickc_plus"))]
+pub mod display_st7735;
+
 pub mod display_buffer;
 pub mod misc;
 pub mod mpu6886;
 pub mod shared_bus_mutex;
 pub mod singleton;
+
+#[cfg(feature = "m5stickc_plus")]
+use crate::display_st7789::Display;
+#[cfg(feature = "m5stickc_plus")]
+type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+
+#[cfg(not(feature = "m5stickc_plus"))]
+use crate::display_st7735::Display;
+#[cfg(not(feature = "m5stickc_plus"))]
+type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+
 
 use esp_idf_hal::gpio::*;
 use esp_idf_hal::i2c;
@@ -30,6 +45,7 @@ type Spi3Master = esp_idf_hal::spi::Master<
   Gpio5<Unknown>,
 >;
 
+
 use anyhow::Result;
 use shared_bus::*;
 
@@ -38,7 +54,7 @@ pub struct M5 {
   pub btn_a: button::Button<Gpio37<Input>>,
   pub btn_b: button::Button<Gpio39<Input>>,
   pub mpu6886: mpu6886::MPU6886<I2c1Proxy>,
-  pub lcd: display::Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>,
+  pub lcd: Lcd,
 }
 
 impl M5 {
@@ -57,7 +73,7 @@ impl M5 {
     let bus_i2c1: &'static _ = shared_bus_mutex::new!(I2c1Master = i2c1).unwrap();
     // let bus_i2c1 = shared_bus::BusManagerSimple::new(i2c1);
 
-    let axp = axp192::Axp192::new(bus_i2c1.acquire_i2c(), axp192::BeginConf::default())?;
+    let axp = axp192::Axp192::new(bus_i2c1.acquire_i2c())?;
 
     let pin_a = peripherals.pins.gpio37.into_input().unwrap();
     let btn_a = button::Button::new(pin_a, true, 10);
@@ -84,7 +100,7 @@ impl M5 {
       },
       config,
     )?;
-    let display = display::Display::new(spi, tft_dc, tft_rst).unwrap();
+    let display = Display::new(spi, tft_dc, tft_rst).unwrap();
 
     return Ok(M5 {
       axp,

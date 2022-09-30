@@ -12,9 +12,10 @@ pub fn map(x: i64, in_min: i64, in_max: i64, out_min: i64, out_max: i64) -> i64 
 
 #[inline(always)]
 #[allow(dead_code)]
-pub fn as_bytes<'a, T>(src: &'a [T]) -> &'a [u8] {
-  let size_of_t = core::mem::size_of::<T>();
-  unsafe { core::slice::from_raw_parts(src.as_ptr() as *mut u8, src.len() * size_of_t) }
+pub fn as_mut_slice_of<'a, FROM, TO>(src: &'a [FROM]) -> &'a [TO] {
+  let size_of_from = core::mem::size_of::<FROM>();
+  let size_of_to = core::mem::size_of::<TO>();
+  unsafe { core::slice::from_raw_parts(src.as_ptr() as *mut TO, src.len() * size_of_from / size_of_to) }
 }
 
 pub fn enable_core0_wdt() {

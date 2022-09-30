@@ -1,31 +1,8 @@
-
 use esp_idf_hal::i2c::I2cError;
 
 use super::misc::map;
 
 const AXP192_ADDRESS: u8 = 0x34;
-
-pub struct BeginConf {
-  disable_ldo2: bool,
-  disable_ldo3: bool,
-  disable_rtc: bool,
-  disable_dcdc1: bool,
-  disable_dcdc3: bool,
-  disable_ldo0: bool,
-}
-
-impl Default for BeginConf {
-  fn default() -> Self {
-    BeginConf {
-      disable_ldo2: false,
-      disable_ldo3: false,
-      disable_rtc: false,
-      disable_dcdc1: false,
-      disable_dcdc3: false,
-      disable_ldo0: false,
-    }
-  }
-}
 
 pub struct Axp192<I2C> {
   i2c: I2C,
@@ -36,17 +13,14 @@ where
   I2C: embedded_hal::i2c::blocking::I2c,
   I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
 {
-  pub fn new(
-    i2c: I2C,
-    x: BeginConf,
-  ) -> anyhow::Result<Self, esp_idf_hal::i2c::I2cError> {
+  pub fn new(i2c: I2C) -> anyhow::Result<Self, esp_idf_hal::i2c::I2cError> {
     let mut ret = Self { i2c };
 
     // Set LDO2 & LDO3(TFT_LED & TFT) 3.0V
     ret.write(&[0x28, 0xcc])?;
 
-    // Set ADC sample rate to 200hz
-    ret.write(&[0x84, 0b11110010])?;
+    // // Set ADC sample rate to 200hz
+    // ret.write(&[0x84, 0b11110010])?;
 
     // Set ADC to All Enable
     ret.write(&[0x82, 0xff])?;
@@ -54,34 +28,23 @@ where
     // Bat charge voltage to 4.2, Current 100MA
     ret.write(&[0x33, 0xc0])?;
 
-    // Depending on configuration enable LDO2, LDO3, DCDC1, DCDC3.
-    let mut buf: u8 = (ret.read1byte(0x12)? & 0xef) | 0x4D;
-    if x.disable_ldo3 {
-      buf &= !(1 << 3);
-    }
-    if x.disable_ldo2 {
-      buf &= !(1 << 2);
-    }
-    if x.disable_dcdc3 {
-      buf &= !(1 << 1);
-    }
-    if x.disable_dcdc1 {
-      buf &= !(1 << 0);
-    }
-    ret.write(&[0x12, buf])?;
+    // Enable Ext, LDO2, LDO3, DCDC1
+    let buf: u8 = ret.read1byte(0x12)?;
+    ret.write(&[0x12, buf | 0x4D])?;
 
     // 128ms power on, 4s power off
     ret.write(&[0x36, 0x0C])?;
 
-    if !x.disable_ldo0 {
+    if cfg!(feature = "m5stickc_plus") {
+      // Set RTC voltage to 3.3V
+      ret.write(&[0x91, 0xF0])?;
+    } else {
       // Set MIC voltage to 2.8V
       ret.write(&[0x91, 0xA0])?;
+    };
 
-      // Set GPIO0 to LDO
-      ret.write(&[0x90, 0x02])?;
-    } else {
-      ret.write(&[0x90, 0x07])?; // GPIO0 floating
-    }
+    // Set GPIO0 to LDO
+    ret.write(&[0x90, 0x02])?;
 
     // Disable vbus hold limit
     ret.write(&[0x30, 0x80])?;
@@ -90,42 +53,49 @@ where
     ret.write(&[0x39, 0xfc])?;
 
     // Enable RTC BAT charge
-    ret.write(&[0x35, 0xa2 & (if x.disable_rtc { 0x7F } else { 0xFF })])?;
+    ret.write(&[0x35, 0xa2])?;
 
     // Enable bat detection
     ret.write(&[0x32, 0x46])?;
 
-    // Set Power off voltage 3.0v
-    let buf = ret.read1byte(0x31)?;
-    ret.write(&[0x31, (buf & 0xf8) | (1 << 2)])?;
+    if cfg!(not(feature = "m5stickc_plus")) {
+      // Set Power off voltage 3.0v
+      let buf = ret.read1byte(0x31)?;
+      ret.write(&[0x31, (buf & 0xf8) | (1 << 2)])?;
+    }
 
     return Ok(ret);
   }
 
-  pub fn screen_breath(&mut self, brightness: i16) -> Result<(), esp_idf_hal::i2c::I2cError> {
+  pub fn screen_breath(&mut self, brightness: i16) -> Result<(), ()> {
     if brightness > 100 || brightness < 0 {
-      return Err(esp_idf_hal::i2c::I2cError::other(
-        esp_idf_sys::EspError::from(-1).unwrap(),
-      ));
+      return Err(());
     }
     let vol = map(brightness.into(), 0, 100, 2500, 3200);
     let vol = if vol < 1800 { 0 } else { (vol - 1800) / 100 };
     let vol = ((vol as u16) << 4) as u8;
 
-    let buf = self.read1byte(0x28)?;
-    self.write(&[0x28, ((buf & 0x0f) | vol)])?;
+    let buf = self.read1byte(0x28).map_err(|_| ())?;
+    self.write(&[0x28, ((buf & 0x0f) | vol)]).map_err(|_| ())?;
 
     return Ok(());
   }
 
   pub fn set_sleep(&mut self) -> Result<(), esp_idf_hal::i2c::I2cError> {
-    let data = self.read1byte(0x31)?;
-    self.write(&[0x31, data | (1 << 3)])?; // Turn on short press to wake up
-    let data = self.read1byte(0x90)?;
-    self.write(&[0x90, data | 0x07])?; // GPIO0 floating
-    self.write(&[0x82, 0x00])?; // Disable ADCs
-    let data = self.read1byte(0x12)?;
-    self.write(&[0x12, data & 0xA1])?; // Disable all outputs but DCDC1
+    let buf = self.read1byte(0x31)?;
+    self.write(&[0x31, buf | (1 << 3)])?; // Turn on short press to wake up
+
+    if cfg!(not(feature = "m5stickc_plus")) {
+      self.write(&[0x90, 0x00])?;
+      self.write(&[0x12, 0x09])?;
+    } else {
+      let data = self.read1byte(0x90)?;
+      self.write(&[0x90, data | 0x07])?; // GPIO0 floating
+      self.write(&[0x82, 0x00])?; // Disable ADCs
+    }
+
+    let buf = self.read1byte(0x12)?;
+    self.write(&[0x12, buf & 0xA1])?; // Disable all outputs but DCDC1
 
     return Ok(());
   }

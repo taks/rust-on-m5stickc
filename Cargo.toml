@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["taks <857tn859@gmail.com>"]
 edition = "2021"
 resolver = "2"
+repository = "https://github.com/taks/rust-on-m5stickc"
+license = "MIT"
 
 [profile.release]
 opt-level = "s"
@@ -13,7 +15,10 @@ debug = true # Symbols are nice and they don't increase the size on Flash
 opt-level = "z"
 
 [features]
-m5stickc_plus = []
+default = ["m5stickc"]
+
+m5stickc = ["st7735-lcd"]
+m5stickc_plus = ["st7789"]
 
 [dependencies]
 log = { version = "0.4", default-features = false }
@@ -28,8 +33,10 @@ embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.7", features = ["u
 embedded-graphics = { version = "0.7.1" }
 shared-bus = { version = "0.2.4", features = ["eh-alpha"] }
 
-[target.'cfg(not(feature = "m5stickc_plus"))'.dependencies]
-st7735-lcd = { git = "https://github.com/taks/st7735-lcd-rs.git", rev = "fbe6560efcf13bb26db05cca98027f18018d1346" }
+display-interface = { varsion =  "0.4" }
+display-interface-spi = {version = "0.4" }
+st7789 = { version = "0.7.0", optional = true }
+st7735-lcd = { git = "https://github.com/taks/st7735-lcd-rs.git", rev = "fbe6560efcf13bb26db05cca98027f18018d1346", optional = true }
 
 [build-dependencies]
 embuild = "0.29"

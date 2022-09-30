@@ -1,3 +1,9 @@
+#![no_std]
+
+#[allow(unused_imports)]
+#[macro_use]
+extern crate alloc;
+
 pub mod axp192;
 pub mod button;
 pub mod display;

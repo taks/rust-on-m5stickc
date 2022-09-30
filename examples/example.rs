@@ -4,8 +4,6 @@
 
 extern crate alloc;
 
-pub mod m5stickc;
-
 use core::fmt::Write;
 
 use embedded_graphics::{
@@ -13,7 +11,6 @@ use embedded_graphics::{
   prelude::{Point, RgbColor},
 };
 use embedded_hal::delay::blocking::DelayUs;
-use log::*;
 use m5stickc::display_buffer;
 
 #[no_mangle]

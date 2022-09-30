@@ -108,17 +108,15 @@ where
     delay.delay_ms(100).unwrap();
 
     self.set_gyro_fsr(Gscale::Gfs2000dps)?;
+    delay.delay_ms(10).unwrap();
     self.set_accel_fsr(Ascale::Afs8g)?;
 
     return Ok(());
   }
 
   pub fn set_gyro_fsr(&mut self, scale: Gscale) -> Result<(), esp_idf_hal::i2c::I2cError> {
-    let mut delay = esp_idf_hal::delay::Ets {};
-
     let regdata = (scale as u8) << 3;
     self.i2c.write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, regdata])?;
-    delay.delay_ms(10).unwrap();
 
     self.g_res = match scale {
       Gscale::Gfs250dps => 250.0 / 32768.0,
@@ -131,11 +129,8 @@ where
   }
 
   pub fn set_accel_fsr(&mut self, scale: Ascale) -> Result<(), esp_idf_hal::i2c::I2cError> {
-    let mut delay = esp_idf_hal::delay::Ets {};
-
     let regdata = (scale as u8) << 3;
     self.i2c.write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, regdata])?;
-    delay.delay_ms(10).unwrap();
 
     self.a_res = match scale {
       Ascale::Afs2g => 2.0 / 32768.0,

@@ -1,4 +1,6 @@
 #![no_std]
+#![allow(clippy::result_unit_err)]
+
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
@@ -17,17 +19,21 @@ pub mod mpu6886;
 pub mod shared_bus_mutex;
 pub mod singleton;
 
-#[cfg(feature = "m5stickc_plus")]
-use crate::display_st7789::Display;
-#[cfg(feature = "m5stickc_plus")]
-type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
-
 #[cfg(not(feature = "m5stickc_plus"))]
 use crate::display_st7735::Display;
 #[cfg(not(feature = "m5stickc_plus"))]
 type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+#[cfg(not(feature = "m5stickc_plus"))]
+const SPI_BAUDRATE: u32 = 27;
 
+#[cfg(feature = "m5stickc_plus")]
+use crate::display_st7789::Display;
+#[cfg(feature = "m5stickc_plus")]
+type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+#[cfg(feature = "m5stickc_plus")]
+const SPI_BAUDRATE: u32 = 40;
 
+use embedded_hal::digital::blocking::OutputPin;
 use esp_idf_hal::gpio::*;
 use esp_idf_hal::i2c;
 use esp_idf_hal::prelude::*;
@@ -45,6 +51,7 @@ type Spi3Master = esp_idf_hal::spi::Master<
   Gpio5<Unknown>,
 >;
 
+pub type Imu = mpu6886::MPU6886<I2c1Proxy>;
 
 use anyhow::Result;
 use shared_bus::*;
@@ -53,8 +60,9 @@ pub struct M5 {
   pub axp: axp192::Axp192<I2c1Proxy>,
   pub btn_a: button::Button<Gpio37<Input>>,
   pub btn_b: button::Button<Gpio39<Input>>,
-  pub mpu6886: mpu6886::MPU6886<I2c1Proxy>,
+  pub imu: Imu,
   pub lcd: Lcd,
+  pub led: Gpio10<Output>,
 }
 
 impl M5 {
@@ -89,7 +97,7 @@ impl M5 {
     let tft_dc = peripherals.pins.gpio23.into_output().unwrap();
     let tft_cs = peripherals.pins.gpio5;
     let tft_rst = peripherals.pins.gpio18.into_output().unwrap();
-    let config = spi::config::Config::default().baudrate(27.MHz().into());
+    let config = spi::config::Config::default().baudrate(SPI_BAUDRATE.MHz().into()).write_only(true);
     let spi = spi::Master::<spi::SPI3, _, _, Gpio14<Unknown>, _>::new(
       spi,
       spi::Pins {
@@ -102,13 +110,17 @@ impl M5 {
     )?;
     let display = Display::new(spi, tft_dc, tft_rst).unwrap();
 
-    return Ok(M5 {
+    let mut led = peripherals.pins.gpio10.into_output().unwrap();
+    let _ = led.set_high();
+
+    Ok(M5 {
       axp,
       btn_a,
       btn_b,
-      mpu6886,
+      imu: mpu6886,
       lcd: display,
-    });
+      led,
+    })
   }
 
   pub fn update(&mut self) {

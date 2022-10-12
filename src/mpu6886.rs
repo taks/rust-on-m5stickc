@@ -46,11 +46,11 @@ where
   I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
 {
   pub fn new(i2c: I2C) -> Self {
-    return Self {
+    Self {
       i2c,
       g_res: 0.0,
       a_res: 0.0,
-    };
+    }
   }
 
   pub fn init(&mut self) -> Result<(), esp_idf_hal::i2c::I2cError> {
@@ -111,7 +111,7 @@ where
     delay.delay_ms(10).unwrap();
     self.set_accel_fsr(Ascale::Afs8g)?;
 
-    return Ok(());
+    Ok(())
   }
 
   pub fn set_gyro_fsr(&mut self, scale: Gscale) -> Result<(), esp_idf_hal::i2c::I2cError> {
@@ -125,7 +125,7 @@ where
       Gscale::Gfs2000dps => 2000.0 / 32768.0,
     };
 
-    return Ok(());
+    Ok(())
   }
 
   pub fn set_accel_fsr(&mut self, scale: Ascale) -> Result<(), esp_idf_hal::i2c::I2cError> {
@@ -139,7 +139,7 @@ where
       Ascale::Afs16g => 16.0 / 32768.0,
     };
 
-    return Ok(());
+    Ok(())
   }
 
   pub fn get_gyro_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
@@ -151,11 +151,11 @@ where
     let gy = (((buf[2] as u16) << 8) | (buf[3] as u16)) as i16;
     let gz = (((buf[4] as u16) << 8) | (buf[5] as u16)) as i16;
 
-    return Ok((
+    Ok((
       (gx as f32) * self.g_res,
       (gy as f32) * self.g_res,
       (gz as f32) * self.g_res,
-    ));
+    ))
   }
 
   pub fn get_accel_data(&mut self) -> Result<(f32, f32, f32), esp_idf_hal::i2c::I2cError> {
@@ -167,10 +167,10 @@ where
     let gy = (((buf[2] as u16) << 8) | (buf[3] as u16)) as i16;
     let gz = (((buf[4] as u16) << 8) | (buf[5] as u16)) as i16;
 
-    return Ok((
+    Ok((
       (gx as f32) * self.a_res,
       (gy as f32) * self.a_res,
       (gz as f32) * self.a_res,
-    ));
+    ))
   }
 }

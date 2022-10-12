@@ -33,7 +33,7 @@ where
     display.set_offset(TFT_X_OFFSET as u16, TFT_Y_OFFSET as u16);
     display.set_orientation(&st7735_lcd::Orientation::Landscape)?;
 
-    return Ok(Display { deriver: display });
+    Ok(Display { deriver: display })
   }
 
   pub fn width(&mut self) -> usize {

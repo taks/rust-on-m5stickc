@@ -39,7 +39,7 @@ where
       .set_orientation(Orientation::Landscape)
       .map_err(|_| ())?;
 
-    return Ok(Display { deriver: display });
+    Ok(Display { deriver: display })
   }
 
   pub fn width(&mut self) -> usize {
@@ -65,7 +65,7 @@ where
         TFT_Y_OFFSET,
         ex + TFT_X_OFFSET,
         ey + TFT_Y_OFFSET,
-        data.iter().map(|e| *e),
+        data.iter().copied(),
       )
       .map_err(|_| ())?;
     Ok(())

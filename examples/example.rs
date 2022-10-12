@@ -31,7 +31,7 @@ fn main() {
 
   let mut delay = esp_idf_hal::delay::Ets {};
   let mut m5 = m5stickc::M5::new().unwrap();
-  m5.mpu6886.init().unwrap();
+  m5.imu.init().unwrap();
 
   let mut canvas = display_buffer::DisplayBuffer::new(
     Rgb565::BLACK,
@@ -45,8 +45,8 @@ fn main() {
     canvas.clear_default();
     canvas.cursur = Point::new(0, 0);
 
-    let gyro_result = m5.mpu6886.get_gyro_data();
-    let accel_result = m5.mpu6886.get_accel_data();
+    let gyro_result = m5.imu.get_gyro_data();
+    let accel_result = m5.imu.get_accel_data();
 
     if gyro_result.is_ok() && accel_result.is_ok() {
       let (gyro_x, gyro_y, gyro_z) = gyro_result.unwrap();

@@ -29,7 +29,7 @@ where
     ret.write(&[0x33, 0xc0])?;
 
     // Enable Ext, LDO2, LDO3, DCDC1
-    let buf: u8 = ret.read1byte(0x12)?;
+    let buf: u8 = ret.read8bit(0x12)?;
     ret.write(&[0x12, buf | 0x4D])?;
 
     // 128ms power on, 4s power off
@@ -60,97 +60,106 @@ where
 
     if cfg!(not(feature = "m5stickc_plus")) {
       // Set Power off voltage 3.0v
-      let buf = ret.read1byte(0x31)?;
+      let buf = ret.read8bit(0x31)?;
       ret.write(&[0x31, (buf & 0xf8) | (1 << 2)])?;
     }
 
-    return Ok(ret);
+    Ok(ret)
   }
 
   pub fn screen_breath(&mut self, brightness: i16) -> Result<(), ()> {
-    if brightness > 100 || brightness < 0 {
+    if !(0..=100).contains(&brightness) {
       return Err(());
     }
     let vol = map(brightness.into(), 0, 100, 2500, 3200);
     let vol = if vol < 1800 { 0 } else { (vol - 1800) / 100 };
     let vol = ((vol as u16) << 4) as u8;
 
-    let buf = self.read1byte(0x28).map_err(|_| ())?;
+    let buf = self.read8bit(0x28).map_err(|_| ())?;
     self.write(&[0x28, ((buf & 0x0f) | vol)]).map_err(|_| ())?;
 
-    return Ok(());
+    Ok(())
   }
 
   pub fn set_sleep(&mut self) -> Result<(), esp_idf_hal::i2c::I2cError> {
-    let buf = self.read1byte(0x31)?;
+    let buf = self.read8bit(0x31)?;
     self.write(&[0x31, buf | (1 << 3)])?; // Turn on short press to wake up
 
     if cfg!(not(feature = "m5stickc_plus")) {
       self.write(&[0x90, 0x00])?;
       self.write(&[0x12, 0x09])?;
     } else {
-      let data = self.read1byte(0x90)?;
+      let data = self.read8bit(0x90)?;
       self.write(&[0x90, data | 0x07])?; // GPIO0 floating
       self.write(&[0x82, 0x00])?; // Disable ADCs
     }
 
-    let buf = self.read1byte(0x12)?;
+    let buf = self.read8bit(0x12)?;
     self.write(&[0x12, buf & 0xA1])?; // Disable all outputs but DCDC1
 
-    return Ok(());
+    Ok(())
+  }
+
+  // 0 not press, 0x01 long press, 0x02 press
+  pub fn get_btn_press(&mut self) -> Result<u8, esp_idf_hal::i2c::I2cError> {
+    let state = self.read8bit(0x46)?;
+    if state > 0 {
+      let _ = self.write(&[0x46, 0x03]);
+    }
+    Ok(state)
   }
 
   pub fn get_bat_voltage(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 1.1 / 1000.0;
     let data = self.read12bit(0x78)? as f32;
-    return Ok(data * ADCLSB);
+    Ok(data * ADCLSB)
   }
   pub fn get_bat_current(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 0.5;
     let current_in = self.read13bit(0x7A)? as f32;
     let current_out = self.read13bit(0x7C)? as f32;
-    return Ok((current_in - current_out) * ADCLSB);
+    Ok((current_in - current_out) * ADCLSB)
   }
 
   pub fn get_vbus_voltage(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 1.7 / 1000.0;
     let data = self.read12bit(0x5A)? as f32;
-    return Ok(data * ADCLSB);
+    Ok(data * ADCLSB)
   }
 
   pub fn get_vbus_current(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 0.375;
     let data = self.read12bit(0x5C)? as f32;
-    return Ok(data * ADCLSB);
+    Ok(data * ADCLSB)
   }
 
   pub fn get_temp_in_axp192(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 0.1;
     const OFFSET_DEG_C: f32 = -144.7;
     let data = self.read12bit(0x5E)?;
-    return Ok(OFFSET_DEG_C + (data as f32) * ADCLSB);
+    Ok(OFFSET_DEG_C + (data as f32) * ADCLSB)
   }
 
   fn write(&mut self, bytes: &[u8]) -> anyhow::Result<(), esp_idf_hal::i2c::I2cError> {
     self.i2c.write(AXP192_ADDRESS, bytes)?;
-    return Ok(());
+    Ok(())
   }
 
-  fn read1byte(&mut self, addr: u8) -> anyhow::Result<u8, esp_idf_hal::i2c::I2cError> {
+  fn read8bit(&mut self, addr: u8) -> anyhow::Result<u8, esp_idf_hal::i2c::I2cError> {
     let mut buf = [0x00u8];
     self.i2c.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
-    return Ok(buf[0]);
+    Ok(buf[0])
   }
 
   fn read12bit(&mut self, addr: u8) -> anyhow::Result<u16, esp_idf_hal::i2c::I2cError> {
     let mut buf = [0x00u8; 2];
     self.i2c.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
-    return Ok(((buf[0] as u16) << 4) + (buf[1] as u16));
+    Ok(((buf[0] as u16) << 4) + (buf[1] as u16))
   }
 
   fn read13bit(&mut self, addr: u8) -> anyhow::Result<u16, esp_idf_hal::i2c::I2cError> {
     let mut buf = [0x00u8; 2];
     self.i2c.write_read(AXP192_ADDRESS, &[addr], &mut buf)?;
-    return Ok(((buf[0] as u16) << 5) + (buf[1] as u16));
+    Ok(((buf[0] as u16) << 5) + (buf[1] as u16))
   }
 }

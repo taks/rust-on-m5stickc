@@ -24,7 +24,7 @@ where
     }
 
     let time = millis();
-    return Button {
+    Button {
       pin,
       state,
       invert,
@@ -35,7 +35,7 @@ where
       last_change: time,
       db_time,
       press_time: time,
-    };
+    }
   }
 
   pub fn read(&mut self) -> bool {
@@ -60,11 +60,11 @@ where
         }
       }
     }
-    return self.state;
+    self.state
   }
 
   pub fn pressed(&mut self) -> bool {
-    return self.state;
+    self.state
   }
 
 }

@@ -63,11 +63,11 @@ impl<C: PixelColor> DisplayBuffer<C> {
   }
 
   pub fn as_pixels(&mut self) -> &[u16] {
-    super::misc::as_mut_slice_of::<C, u16>(&*self.buffer)
+    super::misc::as_mut_slice_of::<C, u16>(&self.buffer)
   }
 
   pub fn as_bytes<>(&mut self) -> &[u8] {
-    super::misc::as_mut_slice_of::<C, u8>(&*self.buffer)
+    super::misc::as_mut_slice_of::<C, u8>(&self.buffer)
   }
 }
 

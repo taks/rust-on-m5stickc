@@ -8,10 +8,10 @@ extern crate alloc;
 pub mod axp192;
 pub mod button;
 
-#[cfg(feature = "m5stickc_plus")]
-pub mod display_st7789;
 #[cfg(not(feature = "m5stickc_plus"))]
 pub mod display_st7735;
+#[cfg(feature = "m5stickc_plus")]
+pub mod display_st7789;
 
 pub mod display_buffer;
 pub mod misc;
@@ -22,14 +22,14 @@ pub mod singleton;
 #[cfg(not(feature = "m5stickc_plus"))]
 use crate::display_st7735::Display;
 #[cfg(not(feature = "m5stickc_plus"))]
-type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+type Lcd = Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
 #[cfg(not(feature = "m5stickc_plus"))]
 const SPI_BAUDRATE: u32 = 27;
 
 #[cfg(feature = "m5stickc_plus")]
 use crate::display_st7789::Display;
 #[cfg(feature = "m5stickc_plus")]
-type Lcd =  Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+type Lcd = Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
 #[cfg(feature = "m5stickc_plus")]
 const SPI_BAUDRATE: u32 = 40;
 
@@ -97,7 +97,9 @@ impl M5 {
     let tft_dc = peripherals.pins.gpio23.into_output().unwrap();
     let tft_cs = peripherals.pins.gpio5;
     let tft_rst = peripherals.pins.gpio18.into_output().unwrap();
-    let config = spi::config::Config::default().baudrate(SPI_BAUDRATE.MHz().into()).write_only(true);
+    let config = spi::config::Config::default()
+      .baudrate(SPI_BAUDRATE.MHz().into())
+      .write_only(true);
     let spi = spi::Master::<spi::SPI3, _, _, Gpio14<Unknown>, _>::new(
       spi,
       spi::Pins {
@@ -113,7 +115,7 @@ impl M5 {
     let mut led = peripherals.pins.gpio10.into_output().unwrap();
     let _ = led.set_high();
 
-    Ok(M5 {
+    Ok(Self {
       axp,
       btn_a,
       btn_b,
@@ -128,4 +130,3 @@ impl M5 {
     self.btn_b.read();
   }
 }
-

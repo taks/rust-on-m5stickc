@@ -5,121 +5,119 @@
 #[macro_use]
 extern crate alloc;
 
-pub mod axp192;
-pub mod button;
-
 #[cfg(not(feature = "m5stickc_plus"))]
 pub mod display_st7735;
 #[cfg(feature = "m5stickc_plus")]
 pub mod display_st7789;
 
+pub mod axp192;
+pub mod button;
 pub mod display_buffer;
 pub mod misc;
 pub mod mpu6886;
+pub mod mutex;
 pub mod shared_bus_mutex;
 pub mod singleton;
+
+use esp_idf_hal::gpio::*;
+use esp_idf_hal::i2c::I2cConfig;
+use esp_idf_hal::i2c::I2cDriver;
+use esp_idf_hal::prelude::Peripherals;
+use esp_idf_hal::prelude::*;
+use esp_idf_hal::spi;
+
+use anyhow::Result;
+use esp_idf_hal::spi::SpiDeviceDriver;
+use esp_idf_hal::spi::SpiDriver;
+use esp_idf_sys::EspError;
+use shared_bus::*;
 
 #[cfg(not(feature = "m5stickc_plus"))]
 use crate::display_st7735::Display;
 #[cfg(not(feature = "m5stickc_plus"))]
-type Lcd = Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+type Lcd<'a> = Display<
+  SpiDeviceDriver<'a, SpiDriver<'a>>,
+  PinDriver<'a, Gpio23, Output>,
+  PinDriver<'a, Gpio18, Output>,
+>;
 #[cfg(not(feature = "m5stickc_plus"))]
 const SPI_BAUDRATE: u32 = 27;
 
 #[cfg(feature = "m5stickc_plus")]
 use crate::display_st7789::Display;
 #[cfg(feature = "m5stickc_plus")]
-type Lcd = Display<Spi3Master, Gpio23<Output>, Gpio18<Output>>;
+type Lcd<'a> = Display<
+  SpiDeviceDriver<'a, SpiDriver<'a>>,
+  PinDriver<'a, Gpio23, Output>,
+  PinDriver<'a, Gpio18, Output>,
+  PinDriver<'a, Gpio0, Output>,
+>;
 #[cfg(feature = "m5stickc_plus")]
 const SPI_BAUDRATE: u32 = 40;
 
-use embedded_hal::digital::blocking::OutputPin;
-use esp_idf_hal::gpio::*;
-use esp_idf_hal::i2c;
-use esp_idf_hal::prelude::*;
-use esp_idf_hal::spi;
+type I2c1Proxy = I2cProxy<'static, shared_bus_mutex::SharedBusMutex<I2cDriver<'static>>>;
 
-use esp_idf_hal::prelude::Peripherals;
-
-type I2c1Master = i2c::Master<i2c::I2C1, Gpio21<Unknown>, Gpio22<Unknown>>;
-type I2c1Proxy = I2cProxy<'static, shared_bus_mutex::SharedBusMutex<I2c1Master>>;
-type Spi3Master = esp_idf_hal::spi::Master<
-  esp_idf_hal::spi::SPI3,
-  Gpio13<Unknown>,
-  Gpio15<Unknown>,
-  Gpio14<Unknown>,
-  Gpio5<Unknown>,
->;
-
-pub type Imu = mpu6886::MPU6886<I2c1Proxy>;
-
-use anyhow::Result;
-use shared_bus::*;
-
-pub struct M5 {
+pub struct M5<'a> {
   pub axp: axp192::Axp192<I2c1Proxy>,
-  pub btn_a: button::Button<Gpio37<Input>>,
-  pub btn_b: button::Button<Gpio39<Input>>,
-  pub imu: Imu,
-  pub lcd: Lcd,
-  pub led: Gpio10<Output>,
+  pub imu: mpu6886::MPU6886<I2c1Proxy>,
+  pub btn_a: button::Button<PinDriver<'a, Gpio37, Input>>,
+  pub btn_b: button::Button<PinDriver<'a, Gpio39, Input>>,
+  pub lcd: Lcd<'a>,
+  pub led: PinDriver<'a, Gpio10, Output>,
 }
 
-impl M5 {
-  pub fn new() -> Result<Self, esp_idf_hal::i2c::I2cError> {
+impl M5<'_> {
+  pub fn new() -> Result<Self, EspError> {
     let peripherals = Peripherals::take().unwrap();
 
-    let config = <i2c::config::MasterConfig as Default>::default().baudrate(400.kHz().into());
-    let i2c1 = i2c::Master::<i2c::I2C1, _, _>::new(
+    let config = I2cConfig::new().baudrate(400.kHz().into());
+    let i2c1 = I2cDriver::new(
       peripherals.i2c1,
-      i2c::MasterPins {
-        sda: peripherals.pins.gpio21,
-        scl: peripherals.pins.gpio22,
-      },
-      config,
+      peripherals.pins.gpio21,
+      peripherals.pins.gpio22,
+      &config,
     )?;
-    let bus_i2c1: &'static _ = shared_bus_mutex::new!(I2c1Master = i2c1).unwrap();
+    let bus_i2c1: &'static _ = shared_bus_mutex::new!(I2cDriver = i2c1).unwrap();
     // let bus_i2c1 = shared_bus::BusManagerSimple::new(i2c1);
 
-    let axp = axp192::Axp192::new(bus_i2c1.acquire_i2c())?;
-
-    let pin_a = peripherals.pins.gpio37.into_input().unwrap();
-    let btn_a = button::Button::new(pin_a, true, 10);
-    let pin_b = peripherals.pins.gpio39.into_input().unwrap();
-    let btn_b = button::Button::new(pin_b, true, 10);
-
+    let axp = axp192::Axp192::new(bus_i2c1.acquire_i2c()).unwrap();
     let mpu6886 = mpu6886::MPU6886::new(bus_i2c1.acquire_i2c());
+
+    let pin_a = PinDriver::input(peripherals.pins.gpio37)?;
+    let btn_a = button::Button::new(pin_a, true, 10);
+    let pin_b = PinDriver::input(peripherals.pins.gpio39)?;
+    let btn_b = button::Button::new(pin_b, true, 10);
 
     let spi = peripherals.spi3;
     let tft_mosi = peripherals.pins.gpio15;
-    // let tft_miso = peripherals.pins.gpio14; // TODO: unused?
     let tft_sclk = peripherals.pins.gpio13;
-    let tft_dc = peripherals.pins.gpio23.into_output().unwrap();
+    let tft_dc = PinDriver::output(peripherals.pins.gpio23)?;
     let tft_cs = peripherals.pins.gpio5;
-    let tft_rst = peripherals.pins.gpio18.into_output().unwrap();
+    let tft_rst = PinDriver::output(peripherals.pins.gpio18)?;
+    // let tft_driver = SpiDriver::new(peripherals.spi3, tft_sclk, tft_mosi, None, Dma::Disabled)?;
+
     let config = spi::config::Config::default()
       .baudrate(SPI_BAUDRATE.MHz().into())
       .write_only(true);
-    let spi = spi::Master::<spi::SPI3, _, _, Gpio14<Unknown>, _>::new(
+    let spi = SpiDeviceDriver::new_single(
       spi,
-      spi::Pins {
-        sclk: tft_sclk,
-        sdo: tft_mosi,
-        sdi: None,
-        cs: Some(tft_cs),
-      },
-      config,
+      tft_sclk,
+      tft_mosi,
+      None::<Gpio0>,
+      esp_idf_hal::spi::Dma::Disabled,
+      Some(tft_cs),
+      &config,
     )?;
     let display = Display::new(spi, tft_dc, tft_rst).unwrap();
 
-    let mut led = peripherals.pins.gpio10.into_output().unwrap();
+    let mut led = PinDriver::output(peripherals.pins.gpio10)?;
     let _ = led.set_high();
 
     Ok(Self {
       axp,
+      imu: mpu6886,
       btn_a,
       btn_b,
-      imu: mpu6886,
       lcd: display,
       led,
     })

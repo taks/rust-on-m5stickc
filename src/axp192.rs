@@ -10,7 +10,7 @@ pub struct Axp192<I2C> {
 
 impl<I2C> Axp192<I2C>
 where
-  I2C: embedded_hal::i2c::blocking::I2c,
+  I2C: embedded_hal::i2c::I2c,
   I2cError: From<<I2C as embedded_hal::i2c::ErrorType>::Error>,
 {
   pub fn new(i2c: I2C) -> anyhow::Result<Self, esp_idf_hal::i2c::I2cError> {

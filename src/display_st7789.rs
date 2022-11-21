@@ -2,7 +2,6 @@ use display_interface_spi::SPIInterfaceNoCS;
 use embedded_graphics::pixelcolor::Rgb565;
 
 use anyhow::Result;
-use esp_idf_hal::gpio::*;
 use esp_idf_sys::EspError;
 use st7789::Orientation;
 
@@ -11,20 +10,22 @@ const TFT_HEIGHT: u16 = 135;
 const TFT_X_OFFSET: u16 = 40;
 const TFT_Y_OFFSET: u16 = 53;
 
-pub struct Display<SPI, DC, RST>
+pub struct Display<SPI, DC, RST, BL>
 where
   SPI: embedded_hal_0_2::blocking::spi::Write<u8>,
   DC: embedded_hal_0_2::digital::v2::OutputPin,
   RST: embedded_hal_0_2::digital::v2::OutputPin,
+  BL: embedded_hal_0_2::digital::v2::OutputPin,
 {
-  deriver: st7789::ST7789<SPIInterfaceNoCS<SPI, DC>, RST, Gpio0<Output>>,
+  deriver: st7789::ST7789<SPIInterfaceNoCS<SPI, DC>, RST, BL>,
 }
 
-impl<SPI, DC, RST> Display<SPI, DC, RST>
+impl<SPI, DC, RST, BL> Display<SPI, DC, RST, BL>
 where
   SPI: embedded_hal_0_2::blocking::spi::Write<u8>,
   DC: embedded_hal_0_2::digital::v2::OutputPin,
   RST: embedded_hal_0_2::digital::v2::OutputPin<Error = EspError>,
+  BL: embedded_hal_0_2::digital::v2::OutputPin<Error = EspError>,
 {
   pub fn new(spi: SPI, tft_dc: DC, tft_rst: RST) -> Result<Self, ()> {
     let tft_width = (TFT_WIDTH + TFT_X_OFFSET) as u16;

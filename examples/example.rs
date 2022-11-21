@@ -10,7 +10,7 @@ use embedded_graphics::{
   pixelcolor::Rgb565,
   prelude::{Point, RgbColor},
 };
-use embedded_hal::delay::blocking::DelayUs;
+use embedded_hal::delay::DelayUs;
 use m5stickc::display_buffer;
 
 #[no_mangle]

@@ -1,6 +1,6 @@
 use super::misc::millis;
 
-pub struct Button<PIN: embedded_hal::digital::blocking::InputPin> {
+pub struct Button<PIN: embedded_hal::digital::InputPin> {
   pin: PIN,
   state: bool,      // current button state
   invert: bool, // if false, interpret high state as pressed, else interpret low state as pressed
@@ -15,7 +15,7 @@ pub struct Button<PIN: embedded_hal::digital::blocking::InputPin> {
 
 impl<PIN> Button<PIN>
 where
-  PIN: embedded_hal::digital::blocking::InputPin,
+  PIN: embedded_hal::digital::InputPin,
 {
   pub fn new(pin: PIN, invert: bool, db_time: u32) -> Self {
     let mut state = pin.is_high().unwrap();

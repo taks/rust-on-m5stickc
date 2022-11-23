@@ -56,10 +56,12 @@ type Lcd<'a> = Display<
 const SPI_BAUDRATE: u32 = 40;
 
 type I2c1Proxy = I2cProxy<'static, shared_bus_mutex::SharedBusMutex<I2cDriver<'static>>>;
+pub type Axp = axp192::Axp192<I2c1Proxy>;
+pub type Imu = mpu6886::MPU6886<I2c1Proxy>;
 
 pub struct M5<'a> {
-  pub axp: axp192::Axp192<I2c1Proxy>,
-  pub imu: mpu6886::MPU6886<I2c1Proxy>,
+  pub axp: Axp,
+  pub imu: Imu,
   pub btn_a: button::Button<PinDriver<'a, Gpio37, Input>>,
   pub btn_b: button::Button<PinDriver<'a, Gpio39, Input>>,
   pub lcd: Lcd<'a>,

@@ -31,8 +31,7 @@ embedded-svc = { version = "0.23.0", default-features = false }
 embedded-hal = { version = "=1.0.0-alpha.9", default-features = false }
 embedded_hal_0_2 = { package = "embedded-hal", version = "0.2.7", features = ["unproven"] }
 embedded-graphics = { version = "0.7.1" }
-# shared-bus = { version = "0.2.4", features = ["eh-alpha"] }
-shared-bus = { version = "0.2.4", features = ["eh-alpha"], git = "https://github.com/taks/shared-bus.git", rev = "803365e12e678fce76659cf24a72aaa4e4a07d83" }
+shared-bus = { version = "0.2.5", features = ["eh-alpha"] }
 
 display-interface = { version =  "0.4" }
 display-interface-spi = {version = "0.4" }

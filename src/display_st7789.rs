@@ -28,8 +28,8 @@ where
   BL: embedded_hal_0_2::digital::v2::OutputPin<Error = EspError>,
 {
   pub fn new(spi: SPI, tft_dc: DC, tft_rst: RST) -> Result<Self, ()> {
-    let tft_width = (TFT_WIDTH + TFT_X_OFFSET) as u16;
-    let tft_height = (TFT_HEIGHT + TFT_Y_OFFSET) as u16;
+    let tft_width = TFT_WIDTH + TFT_X_OFFSET;
+    let tft_height = TFT_HEIGHT + TFT_Y_OFFSET;
 
     let di = SPIInterfaceNoCS::new(spi, tft_dc);
     let mut display = st7789::ST7789::new(di, Some(tft_rst), None, tft_width, tft_height);

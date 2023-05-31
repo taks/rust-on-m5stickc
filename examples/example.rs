@@ -10,7 +10,6 @@ use embedded_graphics::{
   pixelcolor::Rgb565,
   prelude::{Point, RgbColor},
 };
-use embedded_hal::delay::DelayUs;
 use m5stickc::display_buffer;
 
 #[no_mangle]
@@ -22,14 +21,6 @@ fn main() {
   // Bind the log crate to the ESP Logging facilities
   esp_idf_svc::log::EspLogger::initialize_default();
 
-  // WDT OFF
-  unsafe {
-    esp_idf_sys::esp_task_wdt_delete(esp_idf_sys::xTaskGetIdleTaskHandleForCPU(
-      esp_idf_hal::cpu::core() as u32,
-    ));
-  };
-
-  let mut delay = esp_idf_hal::delay::Ets {};
   let mut m5 = m5stickc::M5::new().unwrap();
   m5.imu.init().unwrap();
 
@@ -65,6 +56,6 @@ fn main() {
     }
 
     m5.lcd.draw(&mut canvas).unwrap();
-    delay.delay_ms(100).unwrap();
+    esp_idf_hal::delay::FreeRtos::delay_ms(100);
   }
 }

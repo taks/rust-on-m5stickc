@@ -27,8 +27,7 @@ use esp_idf_hal::prelude::*;
 use esp_idf_hal::spi;
 
 use anyhow::Result;
-use esp_idf_hal::spi::SpiDeviceDriver;
-use esp_idf_hal::spi::SpiDriver;
+use esp_idf_hal::spi::{SpiDeviceDriver, SpiDriver, SpiDriverConfig};
 use esp_idf_sys::EspError;
 use shared_bus::*;
 
@@ -80,7 +79,6 @@ impl M5<'_> {
       &config,
     )?;
     let bus_i2c1: &'static _ = shared_bus_mutex::new!(I2cDriver = i2c1).unwrap();
-    // let bus_i2c1 = shared_bus::BusManagerSimple::new(i2c1);
 
     let axp = axp192::Axp192::new(bus_i2c1.acquire_i2c()).unwrap();
     let mpu6886 = mpu6886::MPU6886::new(bus_i2c1.acquire_i2c());
@@ -106,8 +104,8 @@ impl M5<'_> {
       tft_sclk,
       tft_mosi,
       None::<Gpio0>,
-      esp_idf_hal::spi::Dma::Disabled,
       Some(tft_cs),
+      &SpiDriverConfig::new(),
       &config,
     )?;
     let display = Display::new(spi, tft_dc, tft_rst).unwrap();

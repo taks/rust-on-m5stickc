@@ -22,7 +22,7 @@ jobs:
         ldproxy: true
     - uses: Swatinem/rust-cache@v2
     - name: Build
-      run: cargo check --examples --verbose
+      run: cargo check --examples --verbose --all-features
     - name: Fmt check
       run: cargo fmt --check
     - name: Clippy check

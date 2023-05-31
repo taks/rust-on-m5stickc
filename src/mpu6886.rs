@@ -66,72 +66,72 @@ where
       ));
     }
 
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x00])?;
-    delay.delay_ms(10).unwrap();
+    delay.delay_ms(10);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 7])?;
-    delay.delay_ms(10).unwrap();
+    delay.delay_ms(10);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_PWR_MGMT_1, 0x01 << 0])?;
-    delay.delay_ms(10).unwrap();
+    delay.delay_ms(10);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG, 0x10])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_GYRO_CONFIG, 0x18])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self.i2c.write(MPU6886_ADDRESS, &[MPU6886_CONFIG, 0x01])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_SMPLRT_DIV, 0x05])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x00])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_ACCEL_CONFIG2, 0x00])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_USER_CTRL, 0x00])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self.i2c.write(MPU6886_ADDRESS, &[MPU6886_FIFO_EN, 0x00])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_INT_PIN_CFG, 0x22])?;
-    delay.delay_ms(1).unwrap();
+    delay.delay_ms(1);
 
     self
       .i2c
       .write(MPU6886_ADDRESS, &[MPU6886_INT_ENABLE, 0x01])?;
 
-    delay.delay_ms(100).unwrap();
+    delay.delay_ms(100);
 
     self.set_gyro_fsr(Gscale::Gfs2000dps)?;
-    delay.delay_ms(10).unwrap();
+    delay.delay_ms(10);
     self.set_accel_fsr(Ascale::Afs8g)?;
 
     Ok(())

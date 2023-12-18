@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(type_alias_impl_trait)]
 
 extern crate alloc;
 
@@ -10,6 +9,7 @@ use embedded_graphics::{
   pixelcolor::Rgb565,
   prelude::{Point, RgbColor},
 };
+use esp_idf_hal::peripherals::Peripherals;
 use m5stickc::display_buffer;
 
 #[no_mangle]
@@ -21,7 +21,9 @@ fn main() {
   // Bind the log crate to the ESP Logging facilities
   esp_idf_svc::log::EspLogger::initialize_default();
 
-  let mut m5 = m5stickc::M5::new().unwrap();
+  let peripherals = Peripherals::take().unwrap();
+
+  let mut m5 = m5stickc::new_m5!(peripherals).unwrap();
   m5.imu.init().unwrap();
 
   let mut canvas = display_buffer::DisplayBuffer::new(

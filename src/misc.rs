@@ -20,6 +20,12 @@ pub fn as_mut_slice_of<FROM, TO>(src: &[FROM]) -> &[TO] {
   }
 }
 
+#[inline]
+#[allow(unused)]
+pub(crate) unsafe fn extend_lifetime<'a, 'b: 'a, T: ?Sized>(r: &'a T) -> &'b T {
+  core::mem::transmute::<&'a T, &'b T>(r)
+}
+
 pub fn enable_core0_wdt() {
   todo!()
 }

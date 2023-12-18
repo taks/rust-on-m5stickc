@@ -2,7 +2,7 @@ use display_interface_spi::SPIInterfaceNoCS;
 use embedded_graphics::pixelcolor::Rgb565;
 
 use anyhow::Result;
-use esp_idf_hal::gpio::GpioError;
+use esp_idf_sys::EspError;
 use st7789::{Error, Orientation};
 
 const TFT_WIDTH: u16 = 240;
@@ -24,10 +24,10 @@ impl<SPI, DC, RST, BL> Display<SPI, DC, RST, BL>
 where
   SPI: embedded_hal_0_2::blocking::spi::Write<u8>,
   DC: embedded_hal_0_2::digital::v2::OutputPin,
-  RST: embedded_hal_0_2::digital::v2::OutputPin<Error = GpioError>,
-  BL: embedded_hal_0_2::digital::v2::OutputPin<Error = GpioError>,
+  RST: embedded_hal_0_2::digital::v2::OutputPin<Error = EspError>,
+  BL: embedded_hal_0_2::digital::v2::OutputPin<Error = EspError>,
 {
-  pub fn new(spi: SPI, tft_dc: DC, tft_rst: RST) -> Result<Self, Error<GpioError>> {
+  pub fn new(spi: SPI, tft_dc: DC, tft_rst: RST) -> Result<Self, Error<EspError>> {
     let tft_width = TFT_WIDTH + TFT_X_OFFSET;
     let tft_height = TFT_HEIGHT + TFT_Y_OFFSET;
 
@@ -52,7 +52,7 @@ where
   pub fn draw(
     &mut self,
     display_buffer: &mut super::display_buffer::DisplayBuffer<Rgb565>,
-  ) -> Result<(), Error<GpioError>> {
+  ) -> Result<(), Error<EspError>> {
     let ex = (self.width() - 1) as u16;
     let ey = (self.height() - 1) as u16;
     let data = display_buffer.as_pixels();

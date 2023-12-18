@@ -16,9 +16,11 @@ pub mod display_buffer;
 pub mod misc;
 pub mod mpu6886;
 pub mod mutex;
-pub mod shared_bus_mutex;
-pub mod singleton;
 
+use core::cell::RefCell;
+
+use alloc::boxed::Box;
+use critical_section::Mutex;
 use esp_idf_hal::gpio::*;
 use esp_idf_hal::i2c::I2cConfig;
 use esp_idf_hal::i2c::I2cDriver;
@@ -29,7 +31,8 @@ use esp_idf_hal::spi;
 use anyhow::Result;
 use esp_idf_hal::spi::{SpiDeviceDriver, SpiDriver, SpiDriverConfig};
 use esp_idf_sys::EspError;
-use shared_bus::*;
+
+use embedded_hal_bus::i2c;
 
 #[cfg(not(feature = "m5stickc_plus"))]
 use crate::display_st7735::Display;
@@ -54,20 +57,23 @@ type Lcd<'a> = Display<
 #[cfg(feature = "m5stickc_plus")]
 const SPI_BAUDRATE: u32 = 40;
 
-type I2c1Proxy = I2cProxy<'static, shared_bus_mutex::SharedBusMutex<I2cDriver<'static>>>;
-pub type Axp = axp192::Axp192<I2c1Proxy>;
-pub type Imu = mpu6886::MPU6886<I2c1Proxy>;
+#[inline]
+#[allow(unused)]
+pub(crate) unsafe fn extend_lifetime<'a, 'b: 'a, T: ?Sized>(r: &'a T) -> &'b T {
+  core::mem::transmute::<&'a T, &'b T>(r)
+}
 
 pub struct M5<'a> {
-  pub axp: Axp,
-  pub imu: Imu,
+  i2c1: Box<Mutex<RefCell<I2cDriver<'a>>>>,
+  pub axp: axp192::Axp192<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>>,
+  pub imu: mpu6886::MPU6886<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>>,
   pub btn_a: button::Button<PinDriver<'a, Gpio37, Input>>,
   pub btn_b: button::Button<PinDriver<'a, Gpio39, Input>>,
   pub lcd: Lcd<'a>,
   pub led: PinDriver<'a, Gpio10, Output>,
 }
 
-impl M5<'_> {
+impl<'a> M5<'a> {
   pub fn new() -> Result<Self, EspError> {
     let peripherals = Peripherals::take().unwrap();
 
@@ -78,10 +84,12 @@ impl M5<'_> {
       peripherals.pins.gpio22,
       &config,
     )?;
-    let bus_i2c1: &'static _ = shared_bus_mutex::new!(I2cDriver = i2c1).unwrap();
+    let i2c1 = Box::new(Mutex::new(RefCell::new(i2c1)));
 
-    let axp = axp192::Axp192::new(bus_i2c1.acquire_i2c()).unwrap();
-    let mpu6886 = mpu6886::MPU6886::new(bus_i2c1.acquire_i2c());
+    let i2c1_ref = unsafe { extend_lifetime(i2c1.as_ref()) };
+
+    let axp = axp192::Axp192::new(i2c::CriticalSectionDevice::new(i2c1_ref)).unwrap();
+    let mpu6886 = mpu6886::MPU6886::new(i2c::CriticalSectionDevice::new(i2c1_ref));
 
     let pin_a = PinDriver::input(peripherals.pins.gpio37)?;
     let btn_a = button::Button::new(pin_a, true, 10);
@@ -114,6 +122,7 @@ impl M5<'_> {
     let _ = led.set_high();
 
     Ok(Self {
+      i2c1,
       axp,
       imu: mpu6886,
       btn_a,
@@ -121,6 +130,10 @@ impl M5<'_> {
       lcd: display,
       led,
     })
+  }
+
+  pub fn i2c1(&self) -> &Mutex<RefCell<I2cDriver<'a>>> {
+    self.i2c1.as_ref()
   }
 
   pub fn update(&mut self) {

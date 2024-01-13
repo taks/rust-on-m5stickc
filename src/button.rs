@@ -63,7 +63,7 @@ where
     self.state
   }
 
-  pub fn pressed(&mut self) -> bool {
+  pub fn pressed(&self) -> bool {
     self.state
   }
 }

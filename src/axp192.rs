@@ -67,9 +67,11 @@ where
     Ok(ret)
   }
 
-  pub fn screen_breath(&mut self, brightness: i16) -> Result<(), ()> {
+  pub fn screen_breath(&mut self, brightness: i16) -> Result<(), esp_idf_hal::i2c::I2cError> {
     if !(0..=100).contains(&brightness) {
-      return Err(());
+      return Err(esp_idf_hal::i2c::I2cError::other(
+        esp_idf_sys::EspError::from_infallible::<{ esp_idf_sys::ESP_ERR_INVALID_ARG }>(),
+      ));
     }
     let vol = map(brightness.into(), 0, 100, 2500, 3200);
     let vol = if vol < 1800 { 0 } else { (vol - 1800) / 100 };

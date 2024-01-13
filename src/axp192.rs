@@ -111,6 +111,11 @@ where
     Ok(state)
   }
 
+  /// Get whether the battery is currently charging or not.
+  pub fn is_charging(&mut self) -> anyhow::Result<bool, esp_idf_hal::i2c::I2cError> {
+    Ok((self.read8bit(0x00)? & 0x04) > 0)
+  }
+
   pub fn get_bat_voltage(&mut self) -> anyhow::Result<f32, esp_idf_hal::i2c::I2cError> {
     const ADCLSB: f32 = 1.1 / 1000.0;
     let data = self.read12bit(0x78)? as f32;

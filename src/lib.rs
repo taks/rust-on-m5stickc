@@ -99,12 +99,12 @@ pub struct M5Peripherals {
 
 pub struct M5<'a> {
   i2c1: Box<Mutex<RefCell<I2cDriver<'a>>>>,
-  pub axp: axp192::Axp192<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>>,
-  pub imu: mpu6886::MPU6886<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>>,
-  pub btn_a: button::Button<PinDriver<'a, Gpio37, Input>>,
-  pub btn_b: button::Button<PinDriver<'a, Gpio39, Input>>,
-  pub lcd: Lcd<'a>,
-  pub led: PinDriver<'a, Gpio10, Output>,
+  axp: axp192::Axp192<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>>,
+  imu: mpu6886::MPU6886<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>>,
+  btn_a: button::Button<PinDriver<'a, Gpio37, Input>>,
+  btn_b: button::Button<PinDriver<'a, Gpio39, Input>>,
+  lcd: Lcd<'a>,
+  led: PinDriver<'a, Gpio10, Output>,
 }
 
 impl<'a> M5<'a> {
@@ -165,6 +165,30 @@ impl<'a> M5<'a> {
 
   pub fn i2c1(&self) -> &Mutex<RefCell<I2cDriver<'a>>> {
     self.i2c1.as_ref()
+  }
+
+  pub fn axp(&mut self) -> &mut axp192::Axp192<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>> {
+    &mut self.axp
+  }
+
+  pub fn imu(&mut self) -> &mut mpu6886::MPU6886<i2c::CriticalSectionDevice<'a, I2cDriver<'a>>> {
+    &mut self.imu
+  }
+
+  pub fn btn_a(&self) -> &button::Button<PinDriver<'a, Gpio37, Input>> {
+    &self.btn_a
+  }
+
+  pub fn btn_b(&self) -> &button::Button<PinDriver<'a, Gpio39, Input>> {
+    &self.btn_b
+  }
+
+  pub fn lcd(&mut self) -> &mut Lcd<'a> {
+    &mut self.lcd
+  }
+
+  pub fn led(&mut self) -> &mut PinDriver<'a, Gpio10, Output> {
+    &mut self.led
   }
 
   pub fn update(&mut self) {

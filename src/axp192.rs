@@ -75,8 +75,8 @@ where
     let vol = if vol < 1800 { 0 } else { (vol - 1800) / 100 };
     let vol = ((vol as u16) << 4) as u8;
 
-    let buf = self.read8bit(0x28).map_err(|_| ())?;
-    self.write(&[0x28, ((buf & 0x0f) | vol)]).map_err(|_| ())?;
+    let buf = self.read8bit(0x28)?;
+    self.write(&[0x28, ((buf & 0x0f) | vol)])?;
 
     Ok(())
   }

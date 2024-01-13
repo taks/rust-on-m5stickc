@@ -24,13 +24,13 @@ fn main() {
   let peripherals = Peripherals::take().unwrap();
 
   let mut m5 = m5stickc::new_m5!(peripherals).unwrap();
-  m5.imu.init().unwrap();
+  m5.imu().init().unwrap();
 
   let mut canvas = display_buffer::DisplayBuffer::new(
     Rgb565::BLACK,
     Rgb565::WHITE,
-    m5.lcd.width(),
-    m5.lcd.height(),
+    m5.lcd().width(),
+    m5.lcd().height(),
   );
 
   loop {
@@ -38,8 +38,8 @@ fn main() {
     canvas.clear_default();
     canvas.cursur = Point::new(0, 0);
 
-    let gyro_result = m5.imu.get_gyro_data();
-    let accel_result = m5.imu.get_accel_data();
+    let gyro_result = m5.imu().get_gyro_data();
+    let accel_result = m5.imu().get_accel_data();
 
     if gyro_result.is_ok() && accel_result.is_ok() {
       let (gyro_x, gyro_y, gyro_z) = gyro_result.unwrap();
@@ -57,7 +57,7 @@ fn main() {
       write!(canvas, "Sensor read error").unwrap();
     }
 
-    m5.lcd.draw(&mut canvas).unwrap();
+    m5.lcd().draw(&mut canvas).unwrap();
     esp_idf_hal::delay::FreeRtos::delay_ms(100);
   }
 }

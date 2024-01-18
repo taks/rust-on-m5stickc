@@ -17,8 +17,8 @@ opt-level = "z"
 [features]
 default = ["m5stickc"]
 
-m5stickc = ["st7735-lcd"]
-m5stickc_plus = ["st7789"]
+m5stickc = []
+m5stickc_plus = []
 
 [dependencies]
 log = { version = "0.4", default-features = false }
@@ -34,10 +34,9 @@ embedded-hal-bus = { version = "0.1.0-rc.1", default-features = false }
 embedded-graphics = { version = "0.8.1" }
 critical-section = { version = "1.1.1" }
 
+mipidsi = { git = "https://github.com/almindor/mipidsi.git", rev = "ced9a29c8fa9f99436b1e5a35ff82dabfc6c6350" }
 display-interface = { version =  "0.4" }
 display-interface-spi = {version = "0.4" }
-st7789 = { version = "0.7.0", optional = true }
-st7735-lcd = { git = "https://github.com/taks/st7735-lcd-rs.git", rev = "fbe6560efcf13bb26db05cca98027f18018d1346", optional = true }
 
 [dev-dependencies]
 esp-idf-sys = { version = "0.33", default-features = false, features = ["binstart", "panic_handler", "alloc_handler"] }

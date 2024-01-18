@@ -6,6 +6,7 @@ extern crate alloc;
 use core::fmt::Write;
 
 use embedded_graphics::{
+  geometry::OriginDimensions,
   pixelcolor::Rgb565,
   prelude::{Point, RgbColor},
 };
@@ -29,8 +30,8 @@ fn main() {
   let mut canvas = display_buffer::DisplayBuffer::new(
     Rgb565::BLACK,
     Rgb565::WHITE,
-    m5.lcd().width(),
-    m5.lcd().height(),
+    m5.lcd().size().width as _,
+    m5.lcd().size().height as _,
   );
 
   loop {
@@ -57,7 +58,7 @@ fn main() {
       write!(canvas, "Sensor read error").unwrap();
     }
 
-    m5.lcd().draw(&mut canvas).unwrap();
+    m5.draw(&mut canvas).unwrap();
     esp_idf_hal::delay::FreeRtos::delay_ms(100);
   }
 }

@@ -11,6 +11,7 @@ use embedded_graphics::{
   prelude::{Point, RgbColor},
 };
 use esp_idf_hal::peripherals::Peripherals;
+use esp_idf_svc::timer::EspTaskTimerService;
 use m5stickc::display_buffer;
 
 #[no_mangle]
@@ -34,10 +35,18 @@ fn main() {
     m5.lcd().size().height as _,
   );
 
+  let timer = EspTaskTimerService::new().unwrap();
+  let mut prev = timer.now();
+
   loop {
     m5.update();
     canvas.clear_default();
     canvas.cursur = Point::new(0, 0);
+
+    let now = timer.now();
+    let fps = 1.0 / (now - prev).as_secs_f32();
+    writeln!(canvas, "fps: {:.2}", fps).unwrap();
+    prev = now;
 
     let gyro_result = m5.imu().get_gyro_data();
     let accel_result = m5.imu().get_accel_data();
@@ -58,7 +67,7 @@ fn main() {
       write!(canvas, "Sensor read error").unwrap();
     }
 
-    m5.draw(&mut canvas).unwrap();
+    m5.draw(&canvas).unwrap();
     esp_idf_hal::delay::FreeRtos::delay_ms(100);
   }
 }

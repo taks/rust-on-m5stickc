@@ -18,7 +18,11 @@ jobs:
       with:
         default: true
         ldproxy: true
+    - name: restore timestamps
+      uses: chetan/git-restore-mtime-action@v2
     - uses: Swatinem/rust-cache@v2
+      with:
+        cache-directories: ".embuild"
     - name: Build
       run: cargo check --examples --all-features
     - name: Fmt check
